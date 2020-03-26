@@ -1,16 +1,16 @@
 #include <UIPEthernet.h>
-#include <PubSubClient.h>
+#include <MQTT.h>
 #include <Servo.h>
 
-#define CLIENT_ID       "UnoMQTT"
+
 #define INTERVAL        3000 // 3 sec delay between publishing
 
 // Servo settings
-int redServoPin     = 3;
-int orangeServoPin  = 4;
-int yellowServoPin  = 5;
-int greenServoPin   = 6;
-int purpleServoPin  = 7;
+const int redServoPin     = 3;
+const int orangeServoPin  = 4;
+const int yellowServoPin  = 5;
+const int greenServoPin   = 6;
+const int purpleServoPin  = 7;
 
 Servo red;
 Servo orange;
@@ -24,15 +24,17 @@ Servo purple;
 // Brown  GND
 
 //MQTT settings
-const char* channelName = "VanHalen/Vending";
+const char channelName[] = "VanHalen/Vending";
+const char CLIENT_ID[] = "VanHalenVendor";
 uint8_t mac[6] = {0x00,0x01,0x02,0x03,0x04,0x05};
 EthernetClient ethClient;
-PubSubClient mqttClient;
-long lastReconnectAttempt = 0;
+MQTTClient mqttClient;
+const char mqttServer[] = "192.168.1.15";
+const int mqttServerPort = 1883;
 
 void setup() {
   // setup serial communication
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   // set servo pins for each color
   red.attach(redServoPin);
@@ -46,28 +48,19 @@ void setup() {
     Serial.println(F("Ethernet configuration using DHCP failed"));
     for(;;);
   }
-  // setup mqtt client
-  mqttClient.setClient(ethClient);
-  mqttClient.setServer("192.168.1.15",1883);
-  mqttClient.setCallback(callback);
-  Serial.println(F("MQTT client configured"));
 
-  lastReconnectAttempt = 0;
+  mqttClient.begin(mqttServer, mqttServerPort, ethClient);
+  mqttClient.onMessage(messageReceived);
+  
+  connect();
 }
 
 void loop() {
+  mqttClient.loop();
+
   if (!mqttClient.connected()) {
-    long now = millis();
-    if (now - lastReconnectAttempt > 5000) { // Try to reconnect.
-      lastReconnectAttempt = now;
-      if (reconnect()) { // Attempt to reconnect.
-        lastReconnectAttempt = 0;
-      }
-    }
-  } else { // Connected.
-    mqttClient.loop();
+    connect();
   }
-  
   delay(1000);
 }
 
@@ -103,11 +96,19 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println("-----------------------------");
 }
 
-boolean reconnect() {
-  if (mqttClient.connect(CLIENT_ID)) {
-    mqttClient.subscribe(channelName); // Subscribe to channel.
+void connect() {
+  
+  Serial.println("Trying to connect to broker...");
+  while (!mqttClient.connect(CLIENT_ID)) {
+    Serial.print(".");
+    delay(1000);
   }
-  return mqttClient.connected();
+  
+  Serial.println("Connected to MQTT broker!");
+
+  mqttClient.subscribe("VanHalen/Vending");
+  Serial.println("Connected to " + String(channelName));
+  
 }
 
 void dropSkittles(Servo color, int amount){
@@ -119,3 +120,10 @@ void dropSkittles(Servo color, int amount){
   color.write(90);  
   }
   }
+
+void messageReceived(String &topic, String &payload) {
+  Serial.println("test");
+  Serial.println(topic);
+  Serial.println(payload);
+}
+  
