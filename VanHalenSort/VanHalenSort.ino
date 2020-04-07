@@ -8,28 +8,22 @@
 #define S2 6
 #define S3 7
 #define sensorOut 8
+
 //Setting up MQTT/WIFI connection
-const char WIFI_SSID[] = "Your SSID";
-const char WIFI_PASS[] = "Your Pass";
-const char mqttServer[] = "192.168.2.3";
+const char WIFI_SSID[] = "xxx";//YOUR WIFI SSID NAME HERE
+const char WIFI_PASS[] = "xxx";//YOUR WIFI PASSWORD HERE
+const char mqttServer[] = "mqtt.eclipse.org";   //test.mosquitto.org///mqtt.eclipse.org
 const int mqttServerPort = 1883;
 const char key[] = "key";
 const char secret[] = "secret";
 const char device[] = "mkr1000";
-
 int status = WL_IDLE_STATUS;
 WiFiClient net;
 MQTTClient client;
-
 unsigned long lastMillis = 0;
 
-//Stores frequency read by the photodiodes
-int redFrequency = 0;
-int greenFrequency = 0;
-int blueFrequency = 0;
-
 //define colors
-enum Colors{WHITE, RED, GREEN, BLUE, YELLOW, ORANGE, BROWN, VIOLET};
+enum Colors{NONE, RED, GREEN, PURPLE, YELLOW, ORANGE};
 ////////////////////////////////////////////////////////////////////////////////////
 void setup() {
   Serial.begin(9600);
@@ -44,7 +38,7 @@ void setup() {
   // Setting the sensorOut as an input
   pinMode(sensorOut, INPUT);
   
-  //Frequency scaling to 2%
+  //Frequency scaling to 2% - 2% gives good results with Arduino
   digitalWrite(S0,LOW);
   digitalWrite(S1,HIGH);
   
@@ -56,67 +50,83 @@ void loop() {
   if (!net.connected()) {
     connect();
   }
-
-  //red sensor
-  digitalWrite(S2,LOW);
-  digitalWrite(S3,LOW);
-  redFrequency = pulseIn(sensorOut, LOW);
-
-  //green sensor
-  digitalWrite(S2,HIGH);
-  digitalWrite(S3,HIGH);
-  greenFrequency = pulseIn(sensorOut, LOW);
-
-  //blue sensor
-  digitalWrite(S2,LOW);
-  digitalWrite(S3,HIGH);
-  blueFrequency = pulseIn(sensorOut, LOW);
-
+  //MAIN PROGRAM
   if (millis() - lastMillis > 1000) {
     lastMillis = millis();
-    client.publish("/color", whatColor(redFrequency, greenFrequency, blueFrequency));
+    //Serial.println("R: "+String(smoothOutFrequency(low,low))+"  G: "+String(smoothOutFrequency(high,high))+"  B: "+String(smoothOutFrequency(low, high)));
+    //THIS IS WHERE THE COLOR IS ACTUALLY DETECTED, EACH CHANNEL IS SMOOTHED OUT (AV. OF 5 CONSECUTIVE MEASUREMENTS) FOR MORE STABLE RESULTS
+	  client.publish("/VanHalen/color", discernColor(smoothOutFrequency(low,low), smoothOutFrequency(high,high), smoothOutFrequency(low, high)));
     lastMillis = millis();
   }
 
 };
 
 ///////////////////////////////////////////////////////////////////////////////////
-const char* whatColor(int redFrequency, int greenFrequency, int blueFrequency){
-  Colors tempColor = WHITE;
+const char* discernColor(int[] avFreqRGB){
+  //Colors tempColor = NONE;
 
-  //YELLOW observed sensor values R:14-16 G:23-24 B:5-7
-  if((isInRange(10, 17, redFrequency)) && (isInRange(14, 25, greenFrequency)) && (isInRange(3, 8, blueFrequency))){
-    tempColor = YELLOW;
-  }
-  //RED observed sensor values R:19-22 G:81-83 B:12-14
-  if((isInRange(18, 24, redFrequency)) && (isInRange(70, 90, greenFrequency)) && (isInRange(12, 19, blueFrequency))){
-    tempColor = RED;
-  }
-  //BLUE observed sensor values R:81-84 G:37-39 B:9-11
-  if((isInRange(70, 90, redFrequency)) && (isInRange(35, 45, greenFrequency)) && (isInRange(8, 13, blueFrequency))){
-    tempColor = BLUE;
-  }
-  //GREEN observed sensor values R:26-29 G:23-26 B:9-10
-  if((isInRange(25, 36, redFrequency)) && (isInRange(26, 34, greenFrequency)) && (isInRange(9, 12, blueFrequency))){
-    tempColor = GREEN;
-  }
+
+  int yellowRange[3][2] = {
+      {56, 60},
+      {60, 63},
+      {17, 20}
+  };
+
+
+  int redRange[3][2] = {
+      {67, 71},
+      {83, 86},
+      {21, 25}
+  };
+
+  int purpleRange[3][2] = {
+      {84, 88},
+      {84, 88},
+      {22, 25}
+  };
+
+
+  int greenRange[3][2] = {
+      {75, 80},
+      {67, 72},
+      {20, 23}
+  };
+
+   int orangeRange = {
+      {58, 62},
+      {75, 79},
+      {19, 22}
+   };
+
   return getColorName(tempColor);
 };
 
-//GETTING THE COLOR NAMES OUT OF ENUM
-const char* getColorName(enum Colors color) {
-   switch (color) 
-   {
-      case WHITE: return "White";
-      case RED: return "Red";
-      case GREEN: return "Green";
-      case BLUE: return "Blue";
-      case YELLOW: return "Yellow";
-      case ORANGE: return "Orange";
-      case BROWN: return "Brown";
-      case VIOLET: return "Violet";     
-   }
+/////////////////TAKING AN AVERAGE FROM 5 MEASUREMENTS TO SMOOTH THE FREQ RESPONSE OUT
+int[] averageFreqRGB(){
+  int R = 0;
+  int G = 0;
+  int B = 0;
+
+  for(int i = 0; i < 5; i++){
+    //RED = low, low
+    digitalWrite(S2,LOW);
+    digitalWrite(S3,LOW);
+    R = R + pulseIn(sensorOut, LOW);
+    //GREEN = high, high
+    digitalWrite(S2,HIGH);
+    digitalWrite(S3,HIGH);
+    G = G + pulseIn(sensorOut, LOW);
+    //BLUE = low, high
+    digitalWrite(S2,LOW);
+    digitalWrite(S3,HIGH);
+    B = B + pulseIn(sensorOut, LOW);
+  };
+  R = round(R/5);
+  G = round(G/5);
+  B = round(B/5);
+  return int sumRGB[3] = {R,G,B}; 
 };
+
 //////////////////////////////////////////////////////////////////////////////////////
 bool isInRange(int lowValue, int highValue, int targetValue){ 
   boolean inRange = false;
@@ -126,35 +136,20 @@ bool isInRange(int lowValue, int highValue, int targetValue){
   return inRange;
 };
 
-//TAKING AN AVERAGE FROM 5 MEASUREMENTS TO SMOOTH THE FREQ RESPONSE OUT
-int averageRedFrequency(){
-  //red sensor
-  int freq1 = 0;
-  int freq2 = 0;
-  int freq3 = 0;
-  int freq4 = 0;
-  int freq5 = 0;
-  for(int i = 0; i < 5; i++){
-    digitalWrite(S2,LOW);
-    digitalWrite(S3,LOW);
-    int currentRedFrequency = pulseIn(sensorOut, LOW);
-    switch(i){
-      case 1: freq1 = currentRedFrequency;
-      break;
-      case 2: freq2 = currentRedFrequency;
-      break;
-      case 3: freq3 = currentRedFrequency;
-      break;
-      case 4: freq4 = currentRedFrequency;
-      break;
-      case 5: freq5 = currentRedFrequency;
-      break;
-    }
-  }
-  return round((freq1 + freq2 + freq3 + freq4 + freq5)/5);  
-}
+//////////////////////////////////GETTING THE COLOR NAMES OUT OF ENUM
+const char* getColorName(enum Colors color) {
+   switch (color) 
+   {
+      case NONE: return "none";
+      case RED: return "Red";
+      case GREEN: return "Green";
+      case PURPLE: return "Purple";
+      case YELLOW: return "Yellow";
+      case ORANGE: return "Orange";
+   }
+};
 
-//MQTT/WIFI FUNCTIONS
+/////////////////////////////////MQTT/WIFI CONNECTIONS
 void connect() {
   Serial.print("Trying to connect to WiFi...");
   while ( status != WL_CONNECTED) {
@@ -176,9 +171,10 @@ void connect() {
 
   client.onMessage(messageReceived);
 
-  client.subscribe("/color");
+  client.subscribe("/VanHalen/color");
 }
-//Feedback message
+
+///////////////////////////////FEEDBACK MESSAGE
 void messageReceived(String &topic, String &payload) {
   Serial.println("incoming: " + topic + " - " + payload);
 }
