@@ -2,12 +2,14 @@ class ColorRange
 {
 
 public:
+    char *name;
     int *redRange;
     int *greenRange;
     int *blueRange;
 
-    ColorRange(int _redRange[2], int _greenRange[2], int _blueRange[2])
+    ColorRange(char *_name, int _redRange[2], int _greenRange[2], int _blueRange[2])
     {
+        name = _name;
         redRange = _redRange;
         greenRange = _greenRange;
         blueRange = _blueRange;

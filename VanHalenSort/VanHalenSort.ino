@@ -1,6 +1,7 @@
 #include <WiFi101.h>
 #include <MQTT.h>
 #include <math.h>
+#include <ColorChecker.ino>
 
 //TCS230 pins wiring to Arduino
 #define S0 4
@@ -23,30 +24,36 @@ MQTTClient client;
 unsigned long lastMillis = 0;
 
 //define colors
-int yellowRange[3][2] = {
-    {56, 60},
-    {60, 63},
-    {17, 20}};
+ColorRange *ranges = {
+    new ColorRange(
+        "Yellow",
+        {56, 60},
+        {60, 63},
+        {17, 20}),
 
-int redRange[3][2] = {
-    {67, 71},
-    {83, 86},
-    {21, 25}};
+    new ColorRange(
+        "Red",
+        {67, 71},
+        {83, 86},
+        {21, 25}),
 
-int purpleRange[3][2] = {
-    {84, 88},
-    {84, 88},
-    {22, 25}};
+    new ColorRange(
+        "PURPLE",
+        {84, 88},
+        {84, 88},
+        {22, 25}),
 
-int greenRange[3][2] = {
-    {75, 80},
-    {67, 72},
-    {20, 23}};
+    new ColorRange(
+        "GREEN",
+        {75, 80},
+        {67, 72},
+        {20, 23}),
 
-int orangeRange = {
-    {58, 62},
-    {75, 79},
-    {19, 22}};
+    new ColorRange(
+        "ORANGE",
+        {58, 62},
+        {75, 79},
+        {19, 22})};
 ////////////////////////////////////////////////////////////////////////////////////
 void setup()
 {
@@ -81,13 +88,23 @@ void loop()
     lastMillis = millis();
     //Serial.println("R: "+String(smoothOutFrequency(low,low))+"  G: "+String(smoothOutFrequency(high,high))+"  B: "+String(smoothOutFrequency(low, high)));
     //THIS IS WHERE THE COLOR IS ACTUALLY DETECTED, EACH CHANNEL IS SMOOTHED OUT (AV. OF 5 CONSECUTIVE MEASUREMENTS) FOR MORE STABLE RESULTS
-    client.publish("/VanHalen/color", discernColor(smoothOutFrequency(low, low), smoothOutFrequency(high, high), smoothOutFrequency(low, high)));
+    client.publish("/VanHalen/color", discernColor(new Color(smoothOutFrequency(low, low), smoothOutFrequency(high, high), smoothOutFrequency(low, high))));
     lastMillis = millis();
   }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////
-const char *discernColor(int[] avFreqRGB){};
+const char *discernColor(Color c)
+{
+  for (int i = 0; i < ARRAY_SIZE(ranges); i++)
+  {
+    if (ranges[i].match(c))
+    {
+      return ranges[i].name;
+    }
+    return "NONE"
+  }
+};
 
 /////////////////TAKING AN AVERAGE FROM 5 MEASUREMENTS TO SMOOTH THE FREQ RESPONSE OUT
 int[] averageFreqRGB()
