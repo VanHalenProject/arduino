@@ -24,32 +24,32 @@ MQTTClient client;
 unsigned long lastMillis = 0;
 
 //define colors
-ColorRange *ranges = {
-    new ColorRange(
+ColorRange ranges[5] = {
+    ColorRange(
         "Yellow",
         {56, 60},
         {60, 63},
         {17, 20}),
 
-    new ColorRange(
+    ColorRange(
         "Red",
         {67, 71},
         {83, 86},
         {21, 25}),
 
-    new ColorRange(
+    ColorRange(
         "PURPLE",
         {84, 88},
         {84, 88},
         {22, 25}),
 
-    new ColorRange(
+    ColorRange(
         "GREEN",
         {75, 80},
         {67, 72},
         {20, 23}),
 
-    new ColorRange(
+    ColorRange(
         "ORANGE",
         {58, 62},
         {75, 79},
