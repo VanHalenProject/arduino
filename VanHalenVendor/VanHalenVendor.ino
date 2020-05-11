@@ -25,7 +25,7 @@ Servo purple;
 
 //MQTT settings
 const char* channelName = "VanHalen/Vending";
-const char* server = "192.168.1.15";
+const char* server = "broker.hivemq.com";
 uint8_t mac[6] = {0x00,0x01,0x02,0x03,0x04,0x05};
 EthernetClient ethClient;
 PubSubClient mqttClient;
