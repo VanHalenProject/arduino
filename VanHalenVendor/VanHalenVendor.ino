@@ -25,6 +25,7 @@ Servo purple;
 
 //MQTT settings
 const char* channelName = "VanHalen/Vending";
+const char* server = "broker.hivemq.com";
 uint8_t mac[6] = {0x00,0x01,0x02,0x03,0x04,0x05};
 EthernetClient ethClient;
 PubSubClient mqttClient;
@@ -48,7 +49,7 @@ void setup() {
   }
   // setup mqtt client
   mqttClient.setClient(ethClient);
-  mqttClient.setServer("192.168.1.15",1883);
+  mqttClient.setServer(server,1883);
   mqttClient.setCallback(callback);
   Serial.println(F("MQTT client configured"));
 
@@ -74,11 +75,30 @@ void loop() {
 // callback function to use incoming MQTT messages
 void callback(char* topic, byte* payload, unsigned int length) {
 
-  int rAmount = int((char)payload[0]) - 48;
-  int oAmount = int((char)payload[1]) - 48;
-  int yAmount = int((char)payload[2]) - 48;
-  int gAmount = int((char)payload[3]) - 48;
-  int pAmount = int((char)payload[4]) - 48;
+  if (length > 0){
+  String value = "";
+  for (int i=0;i<length;i++) {
+      value += (char)payload[i];
+  }
+
+  int amount[5], r=0, t=0;
+  
+  for (int i=0; i < value.length(); i++)
+  { 
+   if(value.charAt(i) == ';') 
+    { 
+     amount[t] = value.substring(r, i).toInt(); 
+     r=(i+1); 
+      t++; 
+    }
+  }
+  
+
+  int rAmount = amount[0];
+  int oAmount = amount[1];
+  int yAmount = amount[2];
+  int gAmount = amount[3];
+  int pAmount = amount[4];
  
   Serial.println("Dropping Skittles");
   Serial.print("Red: ");
@@ -101,6 +121,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   Serial.println("DONE");
   Serial.println("-----------------------------");
+  }
 }
 
 boolean reconnect() {
