@@ -18,8 +18,8 @@ Servo servo2;
 String startMessage = "start";
 
 //Setting up MQTT/WIFI connection
-const char WIFI_SSID[] = "PlonaceSkarpetki";
-const char WIFI_PASS[] = "NieDlaPsaKielbasa1983";
+const char WIFI_SSID[] = "xxx";
+const char WIFI_PASS[] = "xxx";
 const char mqttServer[] = "mqtt.eclipse.org";
 const int mqttServerPort = 1883;
 const char key[] = "key";
@@ -31,7 +31,7 @@ unsigned long lastMillis = 0;
 
 enum ColorName{RED, ORANGE, YELLOW, GREEN, PURPLE};
 
-const char* getColorName(ColorName color){
+const char* getEnumName(int color){
   switch(color){
     case RED: return "red";
     case ORANGE: return "orange";
@@ -232,8 +232,8 @@ class Container
       return contPos;
     }
 
-    const char* getName(){
-      return getColorName(contColor);  
+    int getName(){
+      return contColor;  
     }
 
 };
@@ -371,6 +371,8 @@ void loop() {
   }
   client.loop();
 
+//Serial.print("running...");
+
   if(startPayload.equals(startMessage)){
     Serial.print("Start message received!");
     sort = true;
@@ -379,42 +381,40 @@ void loop() {
 //if START command received and servos INITIALIZED do the presorting
   if(sort && initialized){
     Serial.print("Start sorting operation...");
-  char message[10];
+ 
     switch(RGBcontr.discernColor(RGBcontr.getMeasuredRGB(), colors)){
-      
       case RED:
-        servo1contr.runTo(container[RED]);    
-        sprintf(message, "%s = %i", container[RED].getName(), container[RED].getQty());
-        client.publish(topic, message);
+        servo1contr.runTo(container[RED]);
         break;
-        
       case ORANGE:
         servo1contr.runTo(container[ORANGE]);
-        sprintf(message, "%s = %i", container[RED].getName(), container[RED].getQty());
-        client.publish(topic, message);
         break;
-        
       case YELLOW:
         servo1contr.runTo(container[YELLOW]);
-        sprintf(message, "%s = %i", container[ORANGE].getName(), container[ORANGE].getQty());
-        client.publish(topic, message);
         break;
-        
       case GREEN:
         servo1contr.runTo(container[GREEN]);
-        sprintf(message, "%s = %i", container[GREEN].getName(), container[GREEN].getQty());
-        client.publish(topic, message);
         break;
-        
       case PURPLE:
         servo1contr.runTo(container[PURPLE]);
-        sprintf(message, "%s = %i", container[PURPLE].getName(), container[PURPLE].getQty());
-        client.publish(topic, message);
         break;
-        
       default:
         Serial.print("ERROR(switch): color not recognized.");
     }
+  }
+
+  if (millis() - lastMillis > 1000) {
+    lastMillis = millis();
+    int i = 0;
+    while(i < 5){
+      container[i].upQty();
+      char message[10];
+      sprintf(message, "%s = %i", getEnumName(container[i].getName()), container[i].getQty());
+      
+      client.publish(topic, message);
+      i++;
+    }
+    lastMillis = millis();
   }
   
 };
