@@ -384,16 +384,16 @@ void loop() {
  
     switch(RGBcontr.discernColor(RGBcontr.getMeasuredRGB(), colors)){
       case RED:
-        servo1contr.runTo(container[RED]);
+        servo2contr.runTo(container[RED]);
         break;
       case ORANGE:
         servo1contr.runTo(container[ORANGE]);
         break;
       case YELLOW:
-        servo1contr.runTo(container[YELLOW]);
+        servo2contr.runTo(container[YELLOW]);
         break;
       case GREEN:
-        servo1contr.runTo(container[GREEN]);
+        servo2contr.runTo(container[GREEN]);
         break;
       case PURPLE:
         servo1contr.runTo(container[PURPLE]);
