@@ -135,7 +135,7 @@ void dropSkittles(Servo color, int amount){
 
   for (int i=0;i<amount;i++){
   delay(500);
-  color.write(80);
+  color.write(150);
   delay(500);
   color.write(90);  
   }
